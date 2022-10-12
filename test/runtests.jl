@@ -15,10 +15,39 @@ struct MyType{F}
     func::F
     vecs::Vector{SVector{2, Int}}
 end
-Base.@kwdef struct MyTypeWithKW{F}
+TOMLX.@kwdef struct MyTypeWithKW{F}
     func::F
     vecs::Vector{SVector{2, Int}}
     int::Int = 2
+end
+
+abstract type AbstractFoo end
+struct Foo <: AbstractFoo
+    x::Float64
+end
+Base.convert(::Type{AbstractFoo}, x::Number) = Foo(x)
+
+struct Child{T <: AbstractFoo}
+    c::Int
+    d::String
+    e::T
+end
+struct Parent
+    a::Float64
+    b::Vector{Child}
+end
+
+TOMLX.@kwdef struct ChildWithKW{T <: AbstractFoo, U}
+    c::Int
+    d::String
+    e::T = 11 # implicitly converted by `convert(AbstractFoo, 11)`
+    f::Vector{U} = [1,2]
+end
+Base.:(==)(x::ChildWithKW, y::ChildWithKW) = x.c==y.c && x.d==y.d && x.e==y.e && x.f==y.f
+TOMLX.@kwdef struct ParentWithKW{F <: AbstractFloat, C <: ChildWithKW}
+    a::F
+    b::Vector{C}
+    c::ChildWithKW = ChildWithKW(c=0,d="0")
 end
 
 @testset "TOMLX" begin
@@ -72,5 +101,37 @@ end
                               Dict{Symbol,Any}(:x=>SVector(5,6), :y=>SVector(7,8)),]
         @test dictx[:num] === π
         @test dictx[:mul] === 2 * 3.0
+
+        # nested types
+        str = """
+        a = 1.0
+        [[b]]
+        c = 3
+        d = "hi"
+        e = 10 # implicitly converted by `convert(AbstractFoo, 10)`
+        [[b]]
+        c = 4
+        d = "hello"
+        e = 12 # implicitly converted by `convert(AbstractFoo, 12)`
+        """
+        x = (@inferred TOMLX.parse(Main, Parent, str))::Parent
+        @test x.a == 1.0
+        @test x.b == [Child(3,"hi",Foo(10)), Child(4,"hello",Foo(12))]
+
+        # nested types with kw
+        str = """
+        a = 1.0
+        [[b]]
+        c = 3
+        d = "hi"
+        f = [2,3]
+        [[b]]
+        c = 4
+        d = "hello"
+        """
+        x = (TOMLX.parse(Main, ParentWithKW, str))::ParentWithKW{Float64} # cannot infer
+        @test x.a == 1.0
+        @test x.b == [ChildWithKW(3,"hi",Foo(11),[2,3]), ChildWithKW(4,"hello",Foo(11),[1,2])]
+        @test x.c == ChildWithKW(c=0,d="0")
     end
 end
