@@ -15,7 +15,7 @@ struct MyType{F}
     func::F
     vecs::Vector{SVector{2, Int}}
 end
-TOMLX.@kwdef struct MyTypeWithKW{F}
+Base.@kwdef struct MyTypeWithKW{F}
     func::F
     vecs::Vector{SVector{2, Int}}
     int::Int = 2
@@ -25,26 +25,30 @@ abstract type AbstractFoo end
 struct Foo <: AbstractFoo
     x::Float64
 end
-TOMLX.convert(::Type{AbstractFoo}, x::Number) = Foo(x)
+Base.convert(::Type{AbstractFoo}, x::Number) = Foo(x)
 
 struct Child{T <: AbstractFoo}
     c::Int
     d::String
     e::T
+    Child(c,d,e::T) where {T<:AbstractFoo} = new{T}(c,d,e)
+    Child(c,d,e) = Child(c,d,convert(AbstractFoo,e))
 end
 struct Parent
     a::Float64
     b::Vector{Child}
 end
 
-TOMLX.@kwdef struct ChildWithKW{T <: AbstractFoo, U}
+Base.@kwdef struct ChildWithKW{T <: AbstractFoo, U}
     c::Int
     d::String
-    e::T = 11 # implicitly converted by `TOMLX.convert(AbstractFoo, 11)`
+    e::T = 11 # converted to Foo in inner constructor
     f::Vector{U} = [1,2]
+    ChildWithKW(c,d,e::T,f::Vector{U}) where {T<:AbstractFoo,U} = new{T,U}(c,d,e,f)
+    ChildWithKW(c,d,e,f) = ChildWithKW(c,d,convert(AbstractFoo,e),f)
 end
 Base.:(==)(x::ChildWithKW, y::ChildWithKW) = x.c==y.c && x.d==y.d && x.e==y.e && x.f==y.f
-TOMLX.@kwdef struct ParentWithKW{F <: AbstractFloat, C <: ChildWithKW}
+Base.@kwdef struct ParentWithKW{F <: AbstractFloat, C <: ChildWithKW}
     a::F
     b::Vector{C}
     c::ChildWithKW = ChildWithKW(c=0,d="0")
@@ -108,11 +112,11 @@ end
         [[b]]
         c = 3
         d = "hi"
-        e = 10 # implicitly converted by `TOMLX.convert(AbstractFoo, 10)`
+        e = 10 # converted to Foo in inner constructor
         [[b]]
         c = 4
         d = "hello"
-        e = 12 # implicitly converted by `TOMLX.convert(AbstractFoo, 12)`
+        e = 12 # converted to Foo in inner constructor
         """
         x = (@inferred TOMLX.parse(Main, Parent, str))::Parent
         @test x.a == 1.0
