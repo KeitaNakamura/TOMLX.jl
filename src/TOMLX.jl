@@ -79,7 +79,7 @@ postprocess_value(mod::Module, x) = x
 ###################
 
 @generated function _parse_typed(::Type{T}, dict::Dict) where {T <: NamedTuple}
-    args = [:(dict[$(string(name))]) for name in fieldnames(T)]
+    args = [:(dict[$(QuoteNode(name))]) for name in fieldnames(T)]
     quote
         T(tuple($(args...)))
     end
