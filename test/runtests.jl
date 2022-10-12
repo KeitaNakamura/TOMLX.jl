@@ -25,7 +25,7 @@ abstract type AbstractFoo end
 struct Foo <: AbstractFoo
     x::Float64
 end
-Base.convert(::Type{AbstractFoo}, x::Number) = Foo(x)
+TOMLX.convert(::Type{AbstractFoo}, x::Number) = Foo(x)
 
 struct Child{T <: AbstractFoo}
     c::Int
@@ -40,7 +40,7 @@ end
 TOMLX.@kwdef struct ChildWithKW{T <: AbstractFoo, U}
     c::Int
     d::String
-    e::T = 11 # implicitly converted by `convert(AbstractFoo, 11)`
+    e::T = 11 # implicitly converted by `TOMLX.convert(AbstractFoo, 11)`
     f::Vector{U} = [1,2]
 end
 Base.:(==)(x::ChildWithKW, y::ChildWithKW) = x.c==y.c && x.d==y.d && x.e==y.e && x.f==y.f
@@ -108,11 +108,11 @@ end
         [[b]]
         c = 3
         d = "hi"
-        e = 10 # implicitly converted by `convert(AbstractFoo, 10)`
+        e = 10 # implicitly converted by `TOMLX.convert(AbstractFoo, 10)`
         [[b]]
         c = 4
         d = "hello"
-        e = 12 # implicitly converted by `convert(AbstractFoo, 12)`
+        e = 12 # implicitly converted by `TOMLX.convert(AbstractFoo, 12)`
         """
         x = (@inferred TOMLX.parse(Main, Parent, str))::Parent
         @test x.a == 1.0

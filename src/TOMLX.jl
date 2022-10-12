@@ -121,6 +121,8 @@ _parse_typed(::Type{T}, val) where {T} = convert(T, val)
 # @kwdef #
 ##########
 
+convert(::Type{T}, x::Any) where {T} = Base.convert(T, x)
+
 # copied from Base (base/util.jl)
 # In this version, arguments are `convert`ed implicitly
 macro kwdef(expr)
