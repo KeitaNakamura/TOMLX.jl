@@ -64,9 +64,13 @@ end
         # nested julia expression
         str = """
         pts = [{x=SVector(1,2), y=SVector(3,4)}, {x=SVector(5,6), y=SVector(7,8)}]
+        num = π
+        mul = 2 * 3.0
         """
         dictx = TOMLX.@parse(str)
         @test dictx[:pts] == [Dict{Symbol,Any}(:x=>SVector(1,2), :y=>SVector(3,4)),
                               Dict{Symbol,Any}(:x=>SVector(5,6), :y=>SVector(7,8)),]
+        @test dictx[:num] === π
+        @test dictx[:mul] === 2 * 3.0
     end
 end
