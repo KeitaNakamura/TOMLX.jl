@@ -5,10 +5,10 @@ using TOML
 readstring(f::AbstractString) = isfile(f) ? read(f, String) : error(repr(f), ": No such file")
 
 parse(mod::Module, x) = postprocess(mod, TOML.parse(preprocess(mod, x)))
-parse(mod::Module, ::Type{T}, x) where {T} = _parse_typed(T, parse(mod, x))
+parse(mod::Module, ::Type{T}, x) where {T} = _parse2type(T, parse(mod, x))
 
 parsefile(mod::Module, x) = postprocess(mod, Base.TOML.parse(TOML.Parser(preprocess(mod, readstring(x)); filepath=abspath(x))))
-parsefile(mod::Module, ::Type{T}, x) where {T} = _parse_typed(T, parsefile(mod, x))
+parsefile(mod::Module, ::Type{T}, x) where {T} = _parse2type(T, parsefile(mod, x))
 
 # macros to omit module
 macro parse(args...)
@@ -79,26 +79,24 @@ postprocess_value(mod::Module, x) = x
 # parse with type #
 ###################
 
-@generated function _parse_typed(::Type{T}, dict::Dict{Symbol}) where {T <: NamedTuple}
+parse(::Type{T}, dict::Dict{Symbol}) where {T} = _parse2type(T, dict)
+
+@generated function _parse2type(::Type{T}, dict::Dict{Symbol}) where {T <: NamedTuple}
     args = map(fieldnames(T), fieldtypes(T)) do name, type
-        :(_parse_typed($type, dict[$(QuoteNode(name))]))
+        :(_parse2type($type, dict[$(QuoteNode(name))]))
     end
     quote
         T(tuple($(args...)))
     end
 end
 
-function _parse_typed_kw(::Type{T}, dict::Dict{Symbol}) where {T}
-    T(; (k=>_parse_typed(fieldtype(T, k), dict[k]) for k in keys(dict))...)
-end
-
-@generated function _parse_typed(::Type{T}, dict::Dict{Symbol}) where {T}
+@generated function _parse2type(::Type{T}, dict::Dict{Symbol}) where {T}
     args = map(fieldnames(T), fieldtypes(T)) do name, type
-        :(_parse_typed($type, dict[$(QuoteNode(name))]))
+        :(_parse2type($type, dict[$(QuoteNode(name))]))
     end
     quote
         try
-            _parse_typed_kw(T, dict)
+            _parse2type_kw(T, dict)
         catch e
             if e isa MethodError
                 return T($(args...))
@@ -108,13 +106,17 @@ end
     end
 end
 
-function _parse_typed(::Type{T}, values::Vector) where {Eltype, T <: Vector{Eltype}}
-    [_parse_typed(Eltype, val) for val in values]
-end
-function _parse_typed(::Type{T}, values::Vector) where {T <: Vector} # for UnionAll
-    [_parse_typed(T.var.ub, val) for val in values]
+function _parse2type_kw(::Type{T}, dict::Dict{Symbol}) where {T}
+    T(; (k=>_parse2type(fieldtype(T, k), dict[k]) for k in keys(dict))...)
 end
 
-_parse_typed(::Type{T}, val) where {T} = val
+function _parse2type(::Type{T}, values::Vector) where {Eltype, T <: Vector{Eltype}}
+    [_parse2type(Eltype, val) for val in values]
+end
+function _parse2type(::Type{T}, values::Vector) where {T <: Vector} # for UnionAll
+    [_parse2type(T.var.ub, val) for val in values]
+end
+
+_parse2type(::Type{T}, val) where {T} = val
 
 end # module TOMLX
