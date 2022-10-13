@@ -106,8 +106,11 @@ end
     end
 end
 
+function _fieldtype(::Type{T}, k::Symbol) where {T}
+    k in fieldnames(T) ? fieldtype(T, k) : Any
+end
 function _parse2type_kw(::Type{T}, dict::Dict{Symbol}) where {T}
-    T(; (k=>_parse2type(fieldtype(T, k), dict[k]) for k in keys(dict))...)
+    T(; (k=>_parse2type(_fieldtype(T, k), dict[k]) for k in keys(dict))...)
 end
 
 function _parse2type(::Type{T}, values::Vector) where {Eltype, T <: Vector{Eltype}}
