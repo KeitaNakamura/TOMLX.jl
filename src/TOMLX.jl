@@ -115,6 +115,7 @@ end
 function _fieldtype(::Type{T}, k::Symbol) where {T}
     k in fieldnames(T) ? fieldtype(T, k) : Any
 end
+_fieldtype(::Type{<: Union}, k::Symbol) = Any
 function _parse2type_kw(::Type{T}, dict::Dict{Symbol}) where {T}
     T(; (k=>_parse2type(_fieldtype(T, k), dict[k]) for k in keys(dict))...)
 end
