@@ -53,12 +53,22 @@ function preprocess_value_expr!(mod::Module, value::Expr)
             value.args[i] = preprocess_value_expr!(mod, value.args[i])
         end
     else
-        return string("Expr:", value) # wrap
+        return preprocess_value_expr(mod, value)
     end
     value
 end
-preprocess_value_expr!(::Module, x::Symbol) = string("Expr:", x)
+preprocess_value_expr!(mod::Module, x::Symbol) = preprocess_value_expr(mod, x)
 preprocess_value_expr!(::Module, x) = x
+
+function preprocess_value_expr(mod::Module, x)
+    try
+        Base.eval(mod, x)
+    catch e
+        e isa UndefVarError && return x
+        rethrow()
+    end
+    string("Expr:", x) # wrap
+end
 
 # postprocess
 postprocess(mod::Module, dict::Dict{String}) = Dict{Symbol, Any}(Symbol(k)=>postprocess(mod, dict[k]) for k in keys(dict))
