@@ -10,13 +10,9 @@ parse(mod::Module, ::Type{T}, x) where {T} = _parse2type(T, parse(mod, x))
 parsefile(mod::Module, x) = postprocess(mod, Base.TOML.parse(TOML.Parser(preprocess(mod, readstring(x)); filepath=abspath(x))))
 parsefile(mod::Module, ::Type{T}, x) where {T} = _parse2type(T, parsefile(mod, x))
 
-# macros to omit module
-macro parse(args...)
-    esc(:($parse($__module__, $(args...))))
-end
-macro parsefile(args...)
-    esc(:($parsefile($__module__, $(args...))))
-end
+# original parse
+parse(x) = TOML.parse(x)
+parsefile(x) = TOML.parsefile(x)
 
 ######################
 # Pre/Post Processes #

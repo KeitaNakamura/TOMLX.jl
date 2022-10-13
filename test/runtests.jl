@@ -1,7 +1,6 @@
 using TOMLX
 using Test
 
-using TOML
 using Dates
 using StaticArrays
 
@@ -62,19 +61,19 @@ end
         """
 
         @testset "simple parse" begin
-            dictx = TOMLX.@parse(str)
+            dictx = TOMLX.parse(@__MODULE__, str)
             @test dictx[:func](3) == 18
             @test dictx[:vecs] == [SVector(1,2), SVector(3,4)]
         end
 
         @testset "typed parse" begin
             # struct
-            x = TOMLX.@parse(MyType, str)
+            x = TOMLX.parse(@__MODULE__, MyType, str)
             @test x isa MyType
             @test x.func(3) == 18
             @test x.vecs == [SVector(1,2), SVector(3,4)]
             # struct with Base.@kwdef
-            x = TOMLX.@parse(MyTypeWithKW, str)
+            x = TOMLX.parse(@__MODULE__, MyTypeWithKW, str)
             @test x isa MyTypeWithKW
             @test x.func(3) == 18
             @test x.vecs == [SVector(1,2), SVector(3,4)]
@@ -88,8 +87,8 @@ end
     end
 
     @testset "parsefile" begin
-        dict = TOML.parsefile("test.toml")
-        dict_x = TOMLDict(TOMLX.@parsefile("test_x.toml"))
+        dict = TOMLX.parsefile("test.toml")
+        dict_x = TOMLDict(TOMLX.parsefile(@__MODULE__, "test_x.toml"))
         @test dict_x == dict
     end
 
@@ -100,7 +99,7 @@ end
         num = π
         mul = 2 * 3.0
         """
-        dictx = TOMLX.@parse(str)
+        dictx = TOMLX.parse(@__MODULE__, str)
         @test dictx[:pts] == [Dict{Symbol,Any}(:x=>SVector(1,2), :y=>SVector(3,4)),
                               Dict{Symbol,Any}(:x=>SVector(5,6), :y=>SVector(7,8)),]
         @test dictx[:num] === π
