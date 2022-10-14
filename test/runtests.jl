@@ -51,6 +51,7 @@ Base.@kwdef struct ParentWithKW{F <: AbstractFloat, C <: ChildWithKW}
     a::F
     b::Vector{C}
     c::ChildWithKW = ChildWithKW(c=0,d="0")
+    d::Union{Foo, Nothing} = nothing
 end
 
 @testset "TOMLX" begin
@@ -131,10 +132,13 @@ end
         [[b]]
         c = 4
         d = "hello"
+        [d]
+        x = 10
         """
         x = (TOMLX.parse(Main, ParentWithKW, str))::ParentWithKW{Float64} # cannot infer
         @test x.a == 1.0
         @test x.b == [ChildWithKW(3,"hi",Foo(11),[2,3]), ChildWithKW(4,"hello",Foo(11),[1,2])]
         @test x.c == ChildWithKW(c=0,d="0")
+        @test x.d == Foo(10)
     end
 end

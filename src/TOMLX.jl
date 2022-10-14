@@ -96,16 +96,23 @@ parse(::Type{T}, dict::Dict{Symbol}) where {T} = _parse2type(T, dict)
     end
 end
 
-@generated function _parse2type(::Type{T}, dict::Dict{Symbol}) where {T}
+_determine_type(::Type{Union{Nothing, T}}) where {T} = T
+_determine_type(::Type{Union{Missing, T}}) where {T} = T
+function _determine_type(::Type{T}) where {T}
+    typeof(T) == Union && error("cannot determine type $T for TOML table")
+    T
+end
+@generated function _parse2type(::Type{FieldType}, dict::Dict{Symbol}) where {FieldType}
+    T = _determine_type(FieldType)
     args = map(fieldnames(T), fieldtypes(T)) do name, type
         :(_parse2type($type, dict[$(QuoteNode(name))]))
     end
     quote
         try
-            _parse2type_kw(T, dict)
+            _parse2type_kw($T, dict)
         catch e
             if e isa MethodError
-                return T($(args...))
+                return $T($(args...))
             end
             rethrow()
         end
@@ -115,7 +122,6 @@ end
 function _fieldtype(::Type{T}, k::Symbol) where {T}
     k in fieldnames(T) ? fieldtype(T, k) : Any
 end
-_fieldtype(::Type{<: Union}, k::Symbol) = Any
 function _parse2type_kw(::Type{T}, dict::Dict{Symbol}) where {T}
     T(; (k=>_parse2type(_fieldtype(T, k), dict[k]) for k in keys(dict))...)
 end
