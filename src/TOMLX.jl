@@ -4,10 +4,10 @@ using TOML
 
 readstring(f::AbstractString) = isfile(f) ? read(f, String) : error(repr(f), ": No such file")
 
-parse(mod::Module, x) = postprocess(mod, TOML.parse(preprocess(mod, x)))
+parse(mod::Module, x) = postprocess(mod, TOML.parse(preprocess(x)))
 parse(mod::Module, ::Type{T}, x) where {T} = _parse2type(T, parse(mod, x))
 
-parsefile(mod::Module, x) = postprocess(mod, Base.TOML.parse(TOML.Parser(preprocess(mod, readstring(x)); filepath=abspath(x))))
+parsefile(mod::Module, x) = postprocess(mod, Base.TOML.parse(TOML.Parser(preprocess(readstring(x)); filepath=abspath(x))))
 parsefile(mod::Module, ::Type{T}, x) where {T} = _parse2type(T, parsefile(mod, x))
 
 # original parse
@@ -19,61 +19,60 @@ parsefile(x) = TOML.parsefile(x)
 ######################
 
 # preprocess
-function preprocess(mod::Module, x::String)
+function preprocess(x::String)
     exps = []
     for ex in Meta.parseall(x).args
-        ex isa LineNumberNode && continue
-        preprocess_entry_expr!(mod, ex)
+        preprocess_entry_expr!(ex)
         push!(exps, ex)
     end
     join(map(string, exps), '\n')
 end
 
 # parse tables
-function preprocess_entry_expr!(mod::Module, ex::Expr)
+function preprocess_entry_expr!(ex::Expr)
     if Meta.isexpr(ex, :(=))
-        ex.args[2] = preprocess_value_expr!(mod, ex.args[2])
+        ex.args[2] = preprocess_value_expr!(ex.args[2])
     else
         for arg in ex.args
-            preprocess_entry_expr!(mod, arg)
+            preprocess_entry_expr!(arg)
         end
     end
     ex
 end
-preprocess_entry_expr!(::Module, ex) = ex
+preprocess_entry_expr!(ex) = ex
 
 # parse value as julia expression
-function preprocess_value_expr!(mod::Module, value::Expr)
+function preprocess_value_expr!(value::Expr)
     if Meta.isexpr(value, :braces) # inner table
-        preprocess_entry_expr!(mod, value)
+        preprocess_entry_expr!(value)
     elseif Meta.isexpr(value, :vect) # vector
         for i in 1:length(value.args)
-            value.args[i] = preprocess_value_expr!(mod, value.args[i])
+            value.args[i] = preprocess_value_expr!(value.args[i])
         end
     else
-        return preprocess_julia_expr!(mod, value)
+        return preprocess_julia_expr!(value)
     end
     value
 end
-preprocess_value_expr!(mod::Module, str::String) = str
-preprocess_value_expr!(mod::Module, x) = preprocess_julia_expr!(mod, x)
+preprocess_value_expr!(str::String) = str
+preprocess_value_expr!(x) = preprocess_julia_expr!(x)
 
 # replace some non-julian expression in `expr`, and wrap it for `postprocess`
-function preprocess_julia_expr!(mod::Module, expr)
-    string("Expr:", replace_to_julia_expr!(mod, expr)) # wrap
+function preprocess_julia_expr!(expr)
+    string("Expr:", replace_to_julia_expr!(expr)) # wrap
 end
-function replace_to_julia_expr!(mod::Module, expr::Expr)
+function replace_to_julia_expr!(expr::Expr)
     for i in 1:length(expr.args)
-        expr.args[i] = replace_to_julia_expr!(mod, expr.args[i])
+        expr.args[i] = replace_to_julia_expr!(expr.args[i])
     end
     expr
 end
-function replace_to_julia_expr!(mod::Module, sym::Symbol)
+function replace_to_julia_expr!(sym::Symbol)
     sym === :inf && return :Inf
     sym === :nan && return :NaN
     sym
 end
-replace_to_julia_expr!(mod::Module, x) = x
+replace_to_julia_expr!(x) = x
 
 # postprocess
 postprocess(mod::Module, dict::Dict{String}) = Dict{Symbol, Any}(Symbol(k)=>postprocess(mod, dict[k]) for k in keys(dict))

@@ -64,7 +64,7 @@
 end
 
 @testset "parsefile" begin
-    dict = TOMLX.parsefile("test.toml")
-    dict_x = TOMLDict(TOMLX.parsefile(@__MODULE__, "test_x.toml"))
+    dict = TOMLX.parsefile("tomlfiles/test.toml")
+    dict_x = TOMLDict(TOMLX.parsefile(@__MODULE__, "tomlfiles/test_x.toml"))
     @test dict_x == dict
 end
