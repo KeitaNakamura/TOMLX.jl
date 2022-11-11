@@ -10,5 +10,6 @@ end
 TOMLDict(xs::Vector) = [TOMLDict(x) for x in xs]
 TOMLDict(x) = x
 
+include("helpers.jl")
 include("parse.jl")
 include("typed_parse.jl")
