@@ -39,8 +39,8 @@ name = "Born in the USA"
   name = "Dancing in the Dark"
 [x.y.z]
 [[arr]]
-t = {a.b=1}
+t = {a.b=1, a.c=3}
 T = {a.b=1}
 [[arr]]
-t = {a.b=2}
+t = {a.b=2, a.c=4}
 T = {a.b=2}
