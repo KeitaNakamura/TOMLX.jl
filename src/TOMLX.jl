@@ -29,6 +29,7 @@ function preprocess(mod::Module, x::String)
     join(map(string, exps), '\n')
 end
 
+# parse tables
 function preprocess_entry_expr!(mod::Module, ex::Expr)
     if Meta.isexpr(ex, :(=))
         ex.args[2] = preprocess_value_expr!(mod, ex.args[2])
@@ -41,6 +42,7 @@ function preprocess_entry_expr!(mod::Module, ex::Expr)
 end
 preprocess_entry_expr!(::Module, ex) = ex
 
+# parse value as julia expression
 function preprocess_value_expr!(mod::Module, value::Expr)
     if Meta.isexpr(value, :braces) # inner table
         preprocess_entry_expr!(mod, value)
@@ -49,22 +51,29 @@ function preprocess_value_expr!(mod::Module, value::Expr)
             value.args[i] = preprocess_value_expr!(mod, value.args[i])
         end
     else
-        return preprocess_value_expr(mod, value)
+        return preprocess_julia_expr!(mod, value)
     end
     value
 end
-preprocess_value_expr!(mod::Module, x::Symbol) = preprocess_value_expr(mod, x)
-preprocess_value_expr!(::Module, x) = x
+preprocess_value_expr!(mod::Module, str::String) = str
+preprocess_value_expr!(mod::Module, x) = preprocess_julia_expr!(mod, x)
 
-function preprocess_value_expr(mod::Module, x)
-    try
-        Base.eval(mod, x)
-    catch e
-        e isa UndefVarError && return x
-        rethrow()
-    end
-    string("Expr:", x) # wrap
+# replace some non-julian expression in `expr`, and wrap it for `postprocess`
+function preprocess_julia_expr!(mod::Module, expr)
+    string("Expr:", replace_to_julia_expr!(mod, expr)) # wrap
 end
+function replace_to_julia_expr!(mod::Module, expr::Expr)
+    for i in 1:length(expr.args)
+        expr.args[i] = replace_to_julia_expr!(mod, expr.args[i])
+    end
+    expr
+end
+function replace_to_julia_expr!(mod::Module, sym::Symbol)
+    sym === :inf && return :Inf
+    sym === :nan && return :NaN
+    sym
+end
+replace_to_julia_expr!(mod::Module, x) = x
 
 # postprocess
 postprocess(mod::Module, dict::Dict{String}) = Dict{Symbol, Any}(Symbol(k)=>postprocess(mod, dict[k]) for k in keys(dict))
