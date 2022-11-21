@@ -2,10 +2,16 @@ struct MyType{F}
     func::F
     vecs::Vector{SVector{2, Int}}
 end
+struct MyType_wrong{F}
+    func::F
+end
 Base.@kwdef struct MyTypeWithKW{F}
     func::F
     vecs::Vector{SVector{2, Int}}
     int::Int = 2
+end
+Base.@kwdef struct MyTypeWithKW_wrong{F}
+    func::F
 end
 
 struct Child
@@ -43,6 +49,8 @@ end
             @test x isa MyType
             @test x.func(3) == 18
             @test x.vecs == [SVector(1,2), SVector(3,4)]
+            # got unsupported keyword
+            @test_throws Exception TOMLX.parse(@__MODULE__, MyType_wrong, str)
         end
         @testset "struct with Base.@kwdef" begin
             x = TOMLX.parse(@__MODULE__, MyTypeWithKW, str)
@@ -50,12 +58,16 @@ end
             @test x.func(3) == 18
             @test x.vecs == [SVector(1,2), SVector(3,4)]
             @test x.int == 2
+            # got unsupported keyword
+            @test_throws Exception TOMLX.parse(@__MODULE__, MyTypeWithKW_wrong, str)
         end
         @testset "named tuple" begin
             T = @NamedTuple{func::Function, vecs::Vector{SVector{2, Int}}}
             x = (@inferred TOMLX.parse(Main, T, str))::T
             @test x.func(3) == 18
             @test x.vecs == [SVector(1,2), SVector(3,4)]
+            # got unsupported keyword
+            @test_throws Exception TOMLX.parse(Main, @NamedTuple{func::Function}, str)
         end
     end
     @testset "nested type" begin
