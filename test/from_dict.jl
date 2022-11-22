@@ -38,36 +38,39 @@ Base.@kwdef struct ParentWithKW{F <: AbstractFloat, C <: ChildWithKW}
     d::Union{Int, Nothing} = nothing
 end
 
-@testset "typed parse" begin
+@testset "from_dict" begin
     @testset "single type" begin
         str = """
         func = x -> 2x^2
         vecs = [SVector(1,2), SVector(3,4)]
         """
         @testset "struct" begin
-            x = TOMLX.parse(@__MODULE__, MyType, str)
+            dict = TOMLX.parse(@__MODULE__, str)
+            x = TOMLX.from_dict(MyType, dict)
             @test x isa MyType
             @test x.func(3) == 18
             @test x.vecs == [SVector(1,2), SVector(3,4)]
             # got unsupported keyword
-            @test_throws Exception TOMLX.parse(@__MODULE__, MyType_wrong, str)
+            @test_throws Exception TOMLX.from_dict(MyType_wrong, dict)
         end
         @testset "struct with Base.@kwdef" begin
-            x = TOMLX.parse(@__MODULE__, MyTypeWithKW, str)
+            dict = TOMLX.parse(@__MODULE__, str)
+            x = TOMLX.from_dict(MyTypeWithKW, dict)
             @test x isa MyTypeWithKW
             @test x.func(3) == 18
             @test x.vecs == [SVector(1,2), SVector(3,4)]
             @test x.int == 2
             # got unsupported keyword
-            @test_throws Exception TOMLX.parse(@__MODULE__, MyTypeWithKW_wrong, str)
+            @test_throws Exception TOMLX.from_dict(MyTypeWithKW_wrong, dict)
         end
         @testset "named tuple" begin
             T = @NamedTuple{func::Function, vecs::Vector{SVector{2, Int}}}
-            x = (@inferred TOMLX.parse(Main, T, str))::T
+            dict = TOMLX.parse(Main, str)
+            x = (@inferred TOMLX.from_dict(T, dict))::T
             @test x.func(3) == 18
             @test x.vecs == [SVector(1,2), SVector(3,4)]
             # got unsupported keyword
-            @test_throws Exception TOMLX.parse(Main, @NamedTuple{func::Function}, str)
+            @test_throws Exception TOMLX.from_dict(@NamedTuple{func::Function}, dict)
         end
     end
     @testset "nested type" begin
@@ -83,7 +86,8 @@ end
             d = "hello"
             e = 12
             """
-            x = (@inferred TOMLX.parse(Main, Parent, str))::Parent
+            dict = TOMLX.parse(Main, str)
+            x = (@inferred TOMLX.from_dict(Parent, dict))::Parent
             @test x.a == 1.0
             @test x.b == [Child(3,"hi",10), Child(4,"hello",12)]
         end
@@ -98,7 +102,8 @@ end
             c = 4
             d = "hello"
             """
-            x = (TOMLX.parse(Main, ParentWithKW, str))::ParentWithKW{Float64} # cannot infer
+            dict = TOMLX.parse(Main, str)
+            x = (TOMLX.from_dict(ParentWithKW, dict))::ParentWithKW{Float64} # cannot infer
             @test x.a == 1.0
             @test x.b == [ChildWithKW(3,"hi",11.0,[2,3]), ChildWithKW(4,"hello",11.0,[1,2])]
             @test x.c == ChildWithKW(c=0,d="0")

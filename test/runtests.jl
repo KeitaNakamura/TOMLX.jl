@@ -12,4 +12,4 @@ TOMLDict(x) = x
 
 include("helpers.jl")
 include("parse.jl")
-include("typed_parse.jl")
+include("from_dict.jl")
