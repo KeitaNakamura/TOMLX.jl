@@ -1,6 +1,7 @@
 module TOMLX
 
 using TOML
+using Base: @pure
 
 readstring(f::AbstractString) = isfile(f) ? read(f, String) : error(repr(f), ": No such file")
 
@@ -95,52 +96,64 @@ postprocess_value(mod::Module, x) = x
 
 parse(::Type{T}, dict::Dict{Symbol}) where {T} = _parse2type(T, dict)
 
-@generated function _parse2type(::Type{T}, dict::Dict{Symbol}) where {T <: NamedTuple}
-    args = map(fieldnames(T), fieldtypes(T)) do name, type
-        :(_parse2type($type, dict[$(QuoteNode(name))]))
-    end
-    quote
-        T(tuple($(args...)))
-    end
+## _parse2type
+# dict -> named tuple
+function _parse2type(::Type{T}, dict::Dict{Symbol}) where {T <: NamedTuple}
+    T(_get_fields(T, dict))
 end
-
-_determine_type(::Type{Union{Nothing, T}}) where {T} = T
-_determine_type(::Type{Union{Missing, T}}) where {T} = T
-function _determine_type(::Type{T}) where {T}
-    typeof(T) == Union && error("cannot determine type $T for TOML table")
-    T
-end
-@generated function _parse2type(::Type{FieldType}, dict::Dict{Symbol}) where {FieldType}
+# dict -> (mutable) struct
+function _parse2type(::Type{FieldType}, dict::Dict{Symbol}) where {FieldType}
     T = _determine_type(FieldType)
-    args = map(fieldnames(T), fieldtypes(T)) do name, type
-        :(_parse2type($type, dict[$(QuoteNode(name))]))
-    end
-    quote
-        try
-            _parse2type_kw($T, dict)
-        catch e
-            if e isa MethodError
-                return $T($(args...))
-            end
-            rethrow()
+    try
+        # try calling constructor by keyword arguments
+        _parse2type_by_kws(T, dict)
+    catch e
+        if e isa MethodError
+            # call normal constructor by simply giving fields as arguments
+            return T(_get_fields(T, dict)...)
         end
+        rethrow()
     end
 end
-
-function _fieldtype(::Type{T}, k::Symbol) where {T}
-    k in fieldnames(T) ? fieldtype(T, k) : Any
-end
-function _parse2type_kw(::Type{T}, dict::Dict{Symbol}) where {T}
-    T(; (k=>_parse2type(_fieldtype(T, k), dict[k]) for k in keys(dict))...)
-end
-
+# vector cases
 function _parse2type(::Type{T}, values::Vector) where {Eltype, T <: Vector{Eltype}}
     [_parse2type(Eltype, val) for val in values]
 end
 function _parse2type(::Type{T}, values::Vector) where {T <: Vector} # for UnionAll
     [_parse2type(T.var.ub, val) for val in values]
 end
-
+# others
 _parse2type(::Type{T}, val) where {T} = val
+
+## _get_fields
+function _get_fields(::Type{T}, dict::Dict{Symbol}) where {T}
+    names = Set(keys(dict))
+    fields = map(fieldnames(T), fieldtypes(T)) do name, type
+        !haskey(dict, name) && throw(ArgumentError("field `$name` is not given"))
+        delete!(names, name)
+        _parse2type(type, dict[name])
+    end
+    !isempty(names) && throw(ArgumentError("got unsupported field `$(first(names))` for `$T` type"))
+    fields
+end
+
+## _parse2type_by_kws
+function _parse2type_by_kws(::Type{T}, dict::Dict{Symbol}) where {T}
+    T(; (k=>_parse2type(_fieldtype(T, k), dict[k]) for k in keys(dict))...)
+end
+
+## _determine_type
+@pure _determine_type(::Type{Union{Nothing, T}}) where {T} = T
+@pure _determine_type(::Type{Union{Missing, T}}) where {T} = T
+@pure function _determine_type(::Type{T}) where {T}
+    typeof(T) == Union && error("cannot determine type $T for TOML table")
+    T
+end
+
+## _fieldtype
+function _fieldtype(::Type{T}, k::Symbol) where {T}
+    k in fieldnames(T) ? fieldtype(T, k) : Any
+end
+
 
 end # module TOMLX
