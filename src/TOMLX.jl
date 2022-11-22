@@ -3,13 +3,13 @@ module TOMLX
 using TOML
 using Base: @pure
 
+const TOMLTable = Union{Dict{String}, Dict{Symbol}}
+
 readstring(f::AbstractString) = isfile(f) ? read(f, String) : error(repr(f), ": No such file")
 
+# extended parse
 parse(mod::Module, x) = postprocess(mod, TOML.parse(preprocess(x)))
-parse(mod::Module, ::Type{T}, x) where {T} = _parse2type(T, parse(mod, x))
-
 parsefile(mod::Module, x) = postprocess(mod, Base.TOML.parse(TOML.Parser(preprocess(readstring(x)); filepath=abspath(x))))
-parsefile(mod::Module, ::Type{T}, x) where {T} = _parse2type(T, parsefile(mod, x))
 
 # original parse
 parse(x) = TOML.parse(x)
@@ -90,56 +90,58 @@ function postprocess_value(mod::Module, x::String) # parse as julia expression i
 end
 postprocess_value(mod::Module, x) = x
 
-###################
-# parse with type #
-###################
+#############
+# from_dict #
+#############
 
-parse(::Type{T}, dict::Dict{Symbol}) where {T} = _parse2type(T, dict)
+from_dict(::Type{T}, dict::TOMLTable) where {T} = _parse(T, dict)
 
-## _parse2type
 # dict -> named tuple
-function _parse2type(::Type{T}, dict::Dict{Symbol}) where {T <: NamedTuple}
+function _parse(::Type{T}, dict::TOMLTable) where {T <: NamedTuple}
     T(_get_fields(T, dict))
 end
 # dict -> (mutable) struct
-function _parse2type(::Type{FieldType}, dict::Dict{Symbol}) where {FieldType}
-    T = _determine_type(FieldType)
+function _parse(::Type{T}, dict::TOMLTable) where {T}
+    U = _determine_type(T)
     try
         # try calling constructor by keyword arguments
-        _parse2type_by_kws(T, dict)
+        _parse_by_kws(U, dict)
     catch e
         if e isa MethodError
             # call normal constructor by simply giving fields as arguments
-            return T(_get_fields(T, dict)...)
+            return U(_get_fields(U, dict)...)
         end
         rethrow()
     end
 end
 # vector cases
-function _parse2type(::Type{T}, values::Vector) where {Eltype, T <: Vector{Eltype}}
-    [_parse2type(Eltype, val) for val in values]
+function _parse(::Type{T}, values::Vector) where {Eltype, T <: Vector{Eltype}}
+    [_parse(Eltype, val) for val in values]
 end
-function _parse2type(::Type{T}, values::Vector) where {T <: Vector} # for UnionAll
-    [_parse2type(T.var.ub, val) for val in values]
+function _parse(::Type{T}, values::Vector) where {T <: Vector} # for UnionAll
+    [_parse(T.var.ub, val) for val in values]
 end
 # others
-_parse2type(::Type{T}, val) where {T} = val
+_parse(::Type{T}, val) where {T} = convert(T, val)
 
 ## _get_fields
 function _get_fields(::Type{T}, dict::Dict{Symbol}) where {T}
     names = Set(keys(dict))
     fields = map(fieldnames(T), fieldtypes(T)) do name, type
-        !haskey(dict, name) && throw(ArgumentError("field `$name` is not given"))
+        !haskey(dict, name) && throw(ArgumentError("field `$name` must be given"))
         delete!(names, name)
-        _parse2type(type, dict[name])
+        _parse(type, dict[name])
     end
     !isempty(names) && throw(ArgumentError("got unsupported field `$(first(names))` for `$T` type"))
     fields
 end
+function _get_fields(::Type{T}, dict::Dict{String}) where {T}
+    _get_fields(T, Dict(zip(Iterators.map(Symbol, keys(dict)), values(dict))))
+end
 
-## _parse2type_by_kws
-function _parse2type_by_kws(::Type{T}, dict::Dict{Symbol}) where {T}
-    T(; (k=>_parse2type(_fieldtype(T, k), dict[k]) for k in keys(dict))...)
+## _parse_by_kws
+function _parse_by_kws(::Type{T}, dict::TOMLTable) where {T}
+    T(; (k=>_parse(_fieldtype(T, k), dict[k]) for k in keys(dict))...)
 end
 
 ## _determine_type
@@ -154,6 +156,5 @@ end
 function _fieldtype(::Type{T}, k::Symbol) where {T}
     k in fieldnames(T) ? fieldtype(T, k) : Any
 end
-
 
 end # module TOMLX
