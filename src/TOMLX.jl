@@ -15,6 +15,30 @@ parsefile(mod::Module, x) = postprocess(mod, Base.TOML.parse(TOML.Parser(preproc
 parse(x) = TOML.parse(x)
 parsefile(x) = TOML.parsefile(x)
 
+##########
+# Errors #
+##########
+
+abstract type FieldError <: Exception end
+
+struct UndefFieldError <: FieldError
+    type::Type
+    name::Symbol
+end
+function Base.showerror(io::IO, e::UndefFieldError)
+    print(io, "UndefFieldError: ")
+    print(io, "field ", e.name, " must be given for ", e.type)
+end
+
+struct UnsupportedFieldError <: FieldError
+    type::Type
+    name::Symbol
+end
+function Base.showerror(io::IO, e::UnsupportedFieldError)
+    print(io, "UnsupportedFieldError: ")
+    print(io, "got unsupported field ", e.name, " for ", e.type)
+end
+
 ######################
 # Pre/Post Processes #
 ######################
@@ -107,8 +131,15 @@ function _parse(::Type{T}, dict::TOMLTable) where {T}
         # try calling constructor by keyword arguments
         _parse_by_kws(U, dict)
     catch e
+        if e isa UndefKeywordError
+            # In this case, constructor with keyword arguments is defined,
+            # but given keywords were wrong, so throw UndefKeywordError.
+            throw(UndefFieldError(T, e.var))
+        end
         if e isa MethodError
-            # call normal constructor by simply giving fields as arguments
+            # Constructor with keyword arguments is NOT defined or unsupported keyword argument is given,
+            # so try calling normal constructor by simply giving fields as arguments.
+            # Unsupported keyword argument can be detected in `_get_fields` function.
             return U(_get_fields(U, dict)...)
         end
         rethrow()
@@ -128,11 +159,11 @@ _parse(::Type{T}, val) where {T} = convert(T, val)
 function _get_fields(::Type{T}, dict::Dict{Symbol}) where {T}
     names = Set(keys(dict))
     fields = map(fieldnames(T), fieldtypes(T)) do name, type
-        !haskey(dict, name) && throw(ArgumentError("field `$name` must be given"))
+        !haskey(dict, name) && throw(UndefFieldError(T, name))
         delete!(names, name)
         _parse(type, dict[name])
     end
-    !isempty(names) && throw(ArgumentError("got unsupported field `$(first(names))` for `$T` type"))
+    !isempty(names) && throw(UnsupportedFieldError(T, first(names)))
     fields
 end
 function _get_fields(::Type{T}, dict::Dict{String}) where {T}

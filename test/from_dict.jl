@@ -2,7 +2,12 @@ struct MyType{F}
     func::F
     vecs::Vector{SVector{2, Int}}
 end
-struct MyType_wrong{F}
+struct MyType_undef_kw{F}
+    func::F
+    vecs::Vector{SVector{2, Int}}
+    val::Int
+end
+struct MyType_unsupported_kw{F}
     func::F
 end
 Base.@kwdef struct MyTypeWithKW{F}
@@ -10,7 +15,13 @@ Base.@kwdef struct MyTypeWithKW{F}
     vecs::Vector{SVector{2, Int}}
     int::Int = 2
 end
-Base.@kwdef struct MyTypeWithKW_wrong{F}
+Base.@kwdef struct MyTypeWithKW_undef_kw{F}
+    func::F
+    vecs::Vector{SVector{2, Int}}
+    int::Int = 2
+    val::Int
+end
+Base.@kwdef struct MyTypeWithKW_unsupported_kw{F}
     func::F
 end
 
@@ -50,8 +61,9 @@ end
             @test x isa MyType
             @test x.func(3) == 18
             @test x.vecs == [SVector(1,2), SVector(3,4)]
-            # got unsupported keyword
-            @test_throws Exception TOMLX.from_dict(MyType_wrong, dict)
+            # errors
+            @test_throws TOMLX.UndefFieldError TOMLX.from_dict(MyType_undef_kw, dict)
+            @test_throws TOMLX.UnsupportedFieldError TOMLX.from_dict(MyType_unsupported_kw, dict)
         end
         @testset "struct with Base.@kwdef" begin
             dict = TOMLX.parse(@__MODULE__, str)
@@ -60,8 +72,9 @@ end
             @test x.func(3) == 18
             @test x.vecs == [SVector(1,2), SVector(3,4)]
             @test x.int == 2
-            # got unsupported keyword
-            @test_throws Exception TOMLX.from_dict(MyTypeWithKW_wrong, dict)
+            # errors
+            @test_throws TOMLX.UndefFieldError TOMLX.from_dict(MyTypeWithKW_undef_kw, dict)
+            @test_throws TOMLX.UnsupportedFieldError TOMLX.from_dict(MyTypeWithKW_unsupported_kw, dict)
         end
         @testset "named tuple" begin
             T = @NamedTuple{func::Function, vecs::Vector{SVector{2, Int}}}
@@ -70,7 +83,8 @@ end
             @test x.func(3) == 18
             @test x.vecs == [SVector(1,2), SVector(3,4)]
             # got unsupported keyword
-            @test_throws Exception TOMLX.from_dict(@NamedTuple{func::Function}, dict)
+            @test_throws TOMLX.UndefFieldError TOMLX.from_dict(@NamedTuple{func::Function, vecs::Vector{SVector{2, Int}}, val::Int}, dict)
+            @test_throws TOMLX.UnsupportedFieldError TOMLX.from_dict(@NamedTuple{func::Function}, dict)
         end
     end
     @testset "nested type" begin
