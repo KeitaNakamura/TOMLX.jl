@@ -23,6 +23,7 @@ Base.@kwdef struct MyTypeWithKW_undef_kw{F}
 end
 Base.@kwdef struct MyTypeWithKW_unsupported_kw{F}
     func::F
+    int::Int = 2
 end
 
 struct Child
