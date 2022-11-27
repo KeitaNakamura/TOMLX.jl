@@ -140,6 +140,8 @@ function _parse(::Type{T}, dict::TOMLTable) where {T}
             # Constructor with keyword arguments is NOT defined or unsupported keyword argument is given,
             # so try calling normal constructor by simply giving fields as arguments.
             # Unsupported keyword argument can be detected in `_get_fields` function.
+            # Be careful that the UnsupportedFieldError should be checked first rather than UndefKeywordError in `_get_fields` function
+            # to handle the case that the constructor with keyword arguments are defined but given keyword arguments are not supported.
             return U(_get_fields(U, dict)...)
         end
         rethrow()
@@ -158,13 +160,12 @@ _parse(::Type{T}, val) where {T} = convert(T, val)
 ## _get_fields
 function _get_fields(::Type{T}, dict::Dict{Symbol}) where {T}
     names = Set(keys(dict))
-    fields = map(fieldnames(T), fieldtypes(T)) do name, type
+    foreach(name->delete!(names, name), fieldnames(T))
+    !isempty(names) && throw(UnsupportedFieldError(T, first(names)))
+    map(fieldnames(T), fieldtypes(T)) do name, type
         !haskey(dict, name) && throw(UndefFieldError(T, name))
-        delete!(names, name)
         _parse(type, dict[name])
     end
-    !isempty(names) && throw(UnsupportedFieldError(T, first(names)))
-    fields
 end
 function _get_fields(::Type{T}, dict::Dict{String}) where {T}
     _get_fields(T, Dict(zip(Iterators.map(Symbol, keys(dict)), values(dict))))
