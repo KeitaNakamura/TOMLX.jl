@@ -28,7 +28,7 @@ struct UndefFieldError <: FieldError
 end
 function Base.showerror(io::IO, e::UndefFieldError)
     print(io, "UndefFieldError: ")
-    print(io, "field ", e.name, " must be given for ", e.type)
+    print(io, "field \"", e.name, "\" must be given for type \"", e.type, "\"")
 end
 
 struct UnsupportedFieldError <: FieldError
@@ -37,7 +37,7 @@ struct UnsupportedFieldError <: FieldError
 end
 function Base.showerror(io::IO, e::UnsupportedFieldError)
     print(io, "UnsupportedFieldError: ")
-    print(io, "got unsupported field ", e.name, " for ", e.type)
+    print(io, "got unsupported field \"", e.name, "\" for type \"", e.type, "\"")
 end
 
 ######################
