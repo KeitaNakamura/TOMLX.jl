@@ -3,7 +3,8 @@ module TOMLX
 using TOML
 using Base: @pure
 
-const TOMLTable = Union{Dict{String}, Dict{Symbol}}
+# TOML table
+const Table = Union{Dict{String}, Dict{Symbol}}
 
 readstring(f::AbstractString) = isfile(f) ? read(f, String) : error(repr(f), ": No such file")
 
@@ -118,14 +119,14 @@ postprocess_value(mod::Module, x) = x
 # from_dict #
 #############
 
-from_dict(::Type{T}, dict::TOMLTable) where {T} = _parse(T, dict)
+from_dict(::Type{T}, dict::Table) where {T} = _parse(T, dict)
 
 # dict -> named tuple
-function _parse(::Type{T}, dict::TOMLTable) where {T <: NamedTuple}
+function _parse(::Type{T}, dict::Table) where {T <: NamedTuple}
     T(_get_fields(T, dict))
 end
 # dict -> (mutable) struct
-function _parse(::Type{T}, dict::TOMLTable) where {T}
+function _parse(::Type{T}, dict::Table) where {T}
     U = _determine_type(T)
     try
         # try calling constructor by keyword arguments
@@ -159,11 +160,10 @@ _parse(::Type{T}, val) where {T} = convert(T, val)
 
 ## _get_fields
 function _get_fields(::Type{T}, dict::Dict{Symbol}) where {T}
-    names = Set(keys(dict))
-    foreach(name->delete!(names, name), fieldnames(T))
-    !isempty(names) && throw(UnsupportedFieldError(T, first(names)))
+    names = filter(name->!in(name, fieldnames(T)), keys(dict))
+    isempty(names) || throw(UnsupportedFieldError(T, first(names)))
     map(fieldnames(T), fieldtypes(T)) do name, type
-        !haskey(dict, name) && throw(UndefFieldError(T, name))
+        haskey(dict, name) || throw(UndefFieldError(T, name))
         _parse(type, dict[name])
     end
 end
@@ -172,7 +172,7 @@ function _get_fields(::Type{T}, dict::Dict{String}) where {T}
 end
 
 ## _parse_by_kws
-function _parse_by_kws(::Type{T}, dict::TOMLTable) where {T}
+function _parse_by_kws(::Type{T}, dict::Table) where {T}
     T(; (k=>_parse(_fieldtype(T, k), dict[k]) for k in keys(dict))...)
 end
 
