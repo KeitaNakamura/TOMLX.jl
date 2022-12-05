@@ -119,14 +119,16 @@ postprocess_value(mod::Module, x) = x
 # from_dict #
 #############
 
-from_dict(::Type{T}, dict::Table) where {T} = _parse(T, dict)
+# `from_dict` can be overloaded but `FEOM_DICT` is not
+
+from_dict(::Type{T}, dict::Table) where {T} = FROM_DICT(T, dict)
 
 # dict -> named tuple
-function _parse(::Type{T}, dict::Table) where {T <: NamedTuple}
+function FROM_DICT(::Type{T}, dict::Table) where {T <: NamedTuple}
     T(_get_fields(T, dict))
 end
 # dict -> (mutable) struct
-function _parse(::Type{T}, dict::Table) where {T}
+function FROM_DICT(::Type{T}, dict::Table) where {T}
     U = _determine_type(T)
     try
         # try calling constructor by keyword arguments
@@ -148,6 +150,9 @@ function _parse(::Type{T}, dict::Table) where {T}
         rethrow()
     end
 end
+
+# dict case
+_parse(::Type{T}, dict::Table) where {T} = from_dict(T, dict)
 # vector cases
 function _parse(::Type{T}, values::Vector) where {Eltype, T <: Vector{Eltype}}
     [_parse(Eltype, val) for val in values]
