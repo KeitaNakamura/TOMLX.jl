@@ -46,12 +46,42 @@ end
 
 # preprocess
 function preprocess(x::String)
+    x = replace_julia_keywords(x)
     exps = []
     for ex in Meta.parseall(x).args
         preprocess_entry_expr!(ex)
         push!(exps, ex)
     end
-    join(map(string, exps), '\n')
+    replaceback_julia_keywords(join(map(string, exps), '\n'))
+end
+
+const KEYWORDS = [
+    "struct",
+    "begin",
+    "end",
+    "if",
+    "else",
+    "for",
+    "module",
+    "using",
+    "import",
+    "const",
+    "global",
+    "return",
+    "function",
+    "macro",
+]
+function replace_julia_keywords(str::String)
+    for key in KEYWORDS
+        str = replace(str, Regex("\\b"*key*"\\b") => "TOMLX___"*key*"___")
+    end
+    str
+end
+function replaceback_julia_keywords(str::String)
+    for key in KEYWORDS
+        str = replace(str, "TOMLX___"*key*"___" => key)
+    end
+    str
 end
 
 # parse tables
