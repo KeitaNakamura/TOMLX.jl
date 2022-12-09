@@ -72,14 +72,6 @@
         @test dictx[:a][:c] == "hello"
         @test dictx[:a][:d] === π
     end
-    @testset "julia keywords" begin
-        dictx = """
-            module = "MyModule"
-            function = "myfunction"
-        """ |> parse
-        @test dictx[:module] === "MyModule"
-        @test dictx[:function] === "myfunction"
-    end
 end
 
 @testset "parsefile" begin
