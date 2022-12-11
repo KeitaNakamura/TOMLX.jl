@@ -1,7 +1,7 @@
 name = "TOMLX"
 uuid = "17ed53b9-17a0-4985-8cf6-3beb52540041"
 authors = ["Keita Nakamura <keita.nakamura.1109@gmail.com>"]
-version = "0.4.2"
+version = "0.4.3"
 
 [deps]
 Cassette = "7057c7e9-c182-5462-911a-8362d720325c"
