@@ -24,6 +24,7 @@ function parse_julia(l::Parser, mod::Module, use_invokelatest::Bool)
         while !(l.pos == p)
             eat_char(l)
         end
+        peek(l) !== '\n' && eat_char(l)
     elseif peek(l) === '('
         set_marker!(l)
         eat_char(l)

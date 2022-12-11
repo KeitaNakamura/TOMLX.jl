@@ -70,6 +70,20 @@
         @test dictx["a"]["c"] == "hello"
         @test dictx["a"]["d"] === π
     end
+    @testset "check new line" begin
+        @test TOMLX.parse(@__MODULE__, "x = @jl (3,2)")["x"] === (3,2)
+        @test TOMLX.parse(@__MODULE__, "x = @jl (3,2)\n")["x"] === (3,2)
+        @test TOMLX.parse(@__MODULE__, """
+            x = @jl (3,2)
+            y = 3
+        """)["x"] === (3,2)
+        @test TOMLX.parse(@__MODULE__, "x = @jl(3,2)")["x"] === (3,2)
+        @test TOMLX.parse(@__MODULE__, "x = @jl(3,2)\n")["x"] === (3,2)
+        @test TOMLX.parse(@__MODULE__, """
+            x = @jl(3,2)
+            y = 3
+        """)["x"] === (3,2)
+    end
 end
 
 @testset "parsefile" begin
