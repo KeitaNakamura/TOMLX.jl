@@ -53,8 +53,8 @@ end
 @testset "from_dict" begin
     @testset "single type" begin
         str = """
-        func = x -> 2x^2
-        vecs = [SVector(1,2), SVector(3,4)]
+        func = @jl x -> 2x^2
+        vecs = @jl [SVector(1,2), SVector(3,4)]
         """
         @testset "struct" begin
             dict = TOMLX.parse(@__MODULE__, str)
