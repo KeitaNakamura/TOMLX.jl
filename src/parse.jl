@@ -50,10 +50,39 @@ function parse_julia(l::Parser, mod::Module, use_invokelatest::Bool)
     value
 end
 
+"""
+    TOMLX.parse(module, str; use_invokelatest = true)
+
+
+`TOMLX.parse(module, str)` extends the `TOML.parse(str)` to read Julia expression.
+The Julia expression should be specified by `@jl` or `@julia`.
+If `use_invokelatest` is `true`, functions are wrapped by `Base.invokelatest` to avoid world age problem.
+
+# Examples
+
+```julia
+julia> TOMLX.parse(Main, \"""
+       float = 0.1
+       udef = @jl undef
+       int = @julia begin
+           x = 3
+           y = 2
+           x * y
+       end
+       numbers = [@jl(π), 3.14]
+       \""")
+Dict{String, Any} with 4 entries:
+  "int"     => 6
+  "numbers" => Union{Irrational{:π}, Float64}[π, 3.14]
+  "udef"    => UndefInitializer()
+  "float"   => 0.1
+```
+"""
 function parse(mod::Module, x::AbstractString; use_invokelatest::Bool=true)
     metadata = (; mod, use_invokelatest)
     Cassette.overdub(Ctx(; metadata), TOML.parse, x)
 end
+
 function parsefile(mod::Module, x::AbstractString; use_invokelatest::Bool=true)
     metadata = (; mod, use_invokelatest)
     Cassette.overdub(Ctx(; metadata), TOML.parsefile, x)
