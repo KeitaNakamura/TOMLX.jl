@@ -5,13 +5,13 @@
 [![Build Status](https://github.com/KeitaNakamura/TOMLX.jl/workflows/CI/badge.svg)](https://github.com/KeitaNakamura/TOMLX.jl/actions)
 [![codecov](https://codecov.io/gh/KeitaNakamura/TOMLX.jl/branch/main/graph/badge.svg?token=k70humDhCz)](https://codecov.io/gh/KeitaNakamura/TOMLX.jl)
 
-# Installation
+## Installation
 
 ```julia
 pkg> add https://github.com/KeitaNakamura/TOMLX.jl.git
 ```
 
-# Usage
+## Usage
 
 `TOMLX.parse(module, str)` extends the `TOML.parse(str)` to read Julia expressions.
 The Julia expressions should be specified by `@jl` or `@julia`.
