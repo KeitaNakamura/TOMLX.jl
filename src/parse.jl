@@ -56,7 +56,7 @@ end
 
 
 `TOMLX.parse(module, str)` extends the `TOML.parse(str)` to read Julia expression.
-The Julia expression should be specified by `@jl` or `@julia`.
+The Julia expression can be specified by `@jl` or `@julia`.
 If `use_invokelatest` is `true`, functions are wrapped by `Base.invokelatest` to avoid world age problem.
 
 # Examples

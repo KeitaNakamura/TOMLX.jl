@@ -14,7 +14,7 @@ pkg> add https://github.com/KeitaNakamura/TOMLX.jl.git
 ## Usage
 
 `TOMLX.parse(module, str)` extends the `TOML.parse(str)` to read Julia expressions.
-The Julia expressions should be specified by `@jl` or `@julia`.
+The Julia expressions can be specified by `@jl` or `@julia`.
 
 ```julia
 julia> data = """
