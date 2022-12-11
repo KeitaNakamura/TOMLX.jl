@@ -31,7 +31,54 @@ end
 #############
 
 # `from_dict` can be overloaded but `FEOM_DICT` is not
+"""
+    from_dict(::Type, dict)
 
+Construct struct from `dict`.
+
+# Examples
+```jldoctest
+julia> data = \"""
+       float = 0.1
+       udef = @jl undef
+       int = @julia begin
+           x = 3
+           y = 2
+           x * y
+       end
+       numbers = [@jl(π), 3.14]
+       \""";
+
+julia> dict = TOMLX.parse(@__MODULE__, data)
+Dict{String, Any} with 4 entries:
+  "int"     => 6
+  "numbers" => Union{Irrational{:π}, Float64}[π, 3.14]
+  "udef"    => UndefInitializer()
+  "float"   => 0.1
+
+julia> struct MyType
+           float::Float64
+           udef::Any
+           int::Int
+           numbers::Vector{Float64}
+       end
+
+julia> TOMLX.from_dict(MyType, dict)
+MyType(0.1, UndefInitializer(), 6, [3.141592653589793, 3.14])
+
+julia> Base.@kwdef struct MyTypeWithKW
+           float::Float64
+           udef::Any
+           int::Int                 = 0
+           numbers::Vector{Float64}
+           name::String             = "Julia"
+       end
+MyTypeWithKW
+
+julia> TOMLX.from_dict(MyTypeWithKW, dict)
+MyTypeWithKW(0.1, UndefInitializer(), 6, [3.141592653589793, 3.14], "Julia")
+```
+"""
 from_dict(::Type{T}, dict::TOMLDict) where {T} = FROM_DICT(T, dict)
 
 # dict -> named tuple

@@ -54,15 +54,13 @@ end
 """
     TOMLX.parse(module, str; use_invokelatest = true)
 
-
 `TOMLX.parse(module, str)` extends the `TOML.parse(str)` to read Julia expression.
 The Julia expression can be specified by `@jl` or `@julia`.
 If `use_invokelatest` is `true`, functions are wrapped by `Base.invokelatest` to avoid world age problem.
 
 # Examples
-
-```julia
-julia> TOMLX.parse(Main, \"""
+```jldoctest
+julia> TOMLX.parse(@__MODULE__, \"""
        float = 0.1
        udef = @jl undef
        int = @julia begin

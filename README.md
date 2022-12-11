@@ -28,7 +28,7 @@ julia> data = """
        numbers = [@jl(π), 3.14]
        """;
 
-julia> dict = TOMLX.parse(Main, data)
+julia> dict = TOMLX.parse(@__MODULE__, data)
 Dict{String, Any} with 4 entries:
   "int"     => 6
   "numbers" => Union{Irrational{:π}, Float64}[π, 3.14]
