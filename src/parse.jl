@@ -15,17 +15,27 @@ end
 
 function parse_julia(l::Parser, mod::Module, use_invokelatest::Bool)
     err() = ParserError(ErrGenericValueError)
+
+    # accecpt `@jl` or `@julia`, `j` has already been eaten
     ok = accept(l, 'l') ||
         (accept(l, 'u') && accept(l, 'l') && accept(l, 'i') && accept(l, 'a'))
     ok || return err()
 
     if accept(l, ' ')
+        # simply parse the string
         ex, p = Meta.parse(l.str, l.prevpos)
-        while !(l.pos == p)
+        # `Meta.parse` reads `\n`, but we need to leave it for TOML.jl parser system.
+        # Thus we first eat the string until one character before the end,
+        # then check the next character (`peek(l)`) is `\n` or not.
+        # If the character is not `\n`, eat the character.
+        # This is necessary for single line input.
+        while !(l.prevpos == p-1)
             eat_char(l)
         end
         peek(l) !== '\n' && eat_char(l)
     elseif peek(l) === '('
+        # set marker and eat until paired closed bracket
+        # then take substring and parse it
         set_marker!(l)
         eat_char(l)
         count = 0
@@ -46,6 +56,7 @@ function parse_julia(l::Parser, mod::Module, use_invokelatest::Bool)
 
     value = Base.eval(mod, ex)
     if value isa Function && use_invokelatest
+        # if `value` is a function, then wrap it by `Base.invokelatest` to avoid world age problem.
         return (args...; kwargs...) -> Base.invokelatest(value, args...; kwargs...)
     end
     value
