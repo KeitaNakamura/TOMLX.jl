@@ -53,7 +53,7 @@ julia> TOMLX.from_dict(MyType, dict)
 MyType(0.1, UndefInitializer(), 6, [3.141592653589793, 3.14])
 ```
 
-This function is also useful with `Base.@kwdef`.
+This function can be used with `Base.@kwdef`.
 
 ```julia
 julia> Base.@kwdef struct MyTypeWithKW
