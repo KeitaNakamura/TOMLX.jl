@@ -21,7 +21,7 @@ The Julia expressions can be specified by `@jl` or `@julia`.
 julia> data = """
        float = 0.1
        udef = @jl undef
-       int = @julia begin
+       int = @julia let
            x = 3
            y = 2
            x * y

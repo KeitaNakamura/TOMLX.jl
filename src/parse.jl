@@ -74,7 +74,7 @@ If `use_invokelatest` is `true`, functions are wrapped by `Base.invokelatest` to
 julia> TOMLX.parse(@__MODULE__, \"""
        float = 0.1
        udef = @jl undef
-       int = @julia begin
+       int = @julia let
            x = 3
            y = 2
            x * y
