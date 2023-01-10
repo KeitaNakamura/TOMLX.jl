@@ -5,6 +5,7 @@ version = "0.4.4"
 
 [deps]
 Cassette = "7057c7e9-c182-5462-911a-8362d720325c"
+SnoopPrecompile = "66db9d55-30c0-4569-8b51-7e840670fc0c"
 TOML = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 
 [compat]
